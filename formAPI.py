@@ -9,7 +9,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend access
 
 # Load Firestore credentials from environment variable
-cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/etc/secrets/firestore_creds.json")
+cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/etc/secrets/formAPIkey.json")
 if not firebase_admin._apps:
     firebase_admin.initialize_app(credentials.Certificate(cred_path))
 
