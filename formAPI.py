@@ -57,9 +57,11 @@ def debugForm(form_id):
 def updateForm(form_id):
     data = request.json
     fields = data.get("fields", [])  # Expecting an array of fields
+    title = data.get("title")  # Fetch the new title
+    desc = data.get("desc")  # Fetch the new description
 
-    if not form_id or not fields:
-        return jsonify({"error": "Missing form_id or fields"}), 400
+    if not form_id:
+        return jsonify({"error": "Missing form_id"}), 400
 
     form_ref = db.collection("Forms").document(form_id)
     form_doc = form_ref.get()
@@ -67,19 +69,35 @@ def updateForm(form_id):
     if not form_doc.exists:
         return jsonify({"error": "Form not found"}), 404
 
-    # Fetch existing fields or initialize empty list
+    # Fetch existing form data
     form_data = form_doc.to_dict()
+
+    # Update fields only if provided
     existing_fields = form_data.get("fields", [])
+    if fields:
+        existing_fields.extend(fields)
 
-    # Append new fields manually
-    existing_fields.extend(fields)
+    # Prepare the updated data
+    updated_data = {
+        "fields": existing_fields,
+    }
+    
+    # Update title and description only if they are provided in the request
+    if title is not None:
+        updated_data["title"] = title
+    if desc is not None:
+        updated_data["desc"] = desc
 
-    # Update Firestore document
-    form_ref.set({"fields": existing_fields}, merge=True)
+    # Update Firestore document with merged data
+    form_ref.set(updated_data, merge=True)
 
-    # Return updated list of fields
-    updated_fields = returnAllFields(form_id)
-    return jsonify({"fields": updated_fields}), 200
+    # Return updated form data
+    return jsonify({
+        "form_id": form_id,
+        "title": updated_data.get("title", form_data.get("title")),
+        "desc": updated_data.get("desc", form_data.get("desc")),
+        "fields": existing_fields
+    }), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)  # Required for Render
