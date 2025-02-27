@@ -24,7 +24,10 @@ def createForm():
     form_doc = {
         'title': data.get("title", "Untitled Form"),
         'desc': data.get("desc", "No description..."),
-        'fields': {}
+        'fields': {
+            0: {
+            }
+        }
     }
 
     db.collection('Forms').document(form_id).set(form_doc)
