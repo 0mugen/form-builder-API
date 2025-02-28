@@ -99,8 +99,8 @@ def updateForm(form_id):
 
     return jsonify({
         "form_id": form_id,
-        "title": updated_data.get("title", form_doc.to_dict().get("title")),
-        "desc": updated_data.get("desc", form_doc.to_dict().get("desc")),
+        "title": updated_data.get("title", form_doc.to_dict().get("title", "Untitled-Form")),
+        "desc": updated_data.get("desc", form_doc.to_dict().get("desc", "No description")),
         "fields": updated_fields
     }), 200
 
