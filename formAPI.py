@@ -55,9 +55,9 @@ def debugForm(form_id):
 @app.route('/update-form/<form_id>', methods=['POST'])
 def updateForm(form_id):
     data = request.json
-    fields = data.get("fields", [])  # Expecting an array of fields
-    title = data.get("title")  # Fetch the new title
-    desc = data.get("desc")  # Fetch the new description
+    fields = data.get("fields", [])  
+    title = data.get("title")  
+    desc = data.get("desc")  
 
     if not form_id:
         return jsonify({"error": "Missing form_id"}), 400
@@ -68,38 +68,42 @@ def updateForm(form_id):
     if not form_doc.exists:
         return jsonify({"error": "Form not found"}), 404
 
-    # Update title and description if provided
     updated_data = {}
     if title is not None:
         updated_data["title"] = title
     if desc is not None:
         updated_data["desc"] = desc
 
-    # Update form document metadata
     if updated_data:
-        form_ref.update(updated_data)
+        form_ref.set(updated_data, merge=True)  # Merge update
 
-    # Add new fields to the subcollection
     if fields:
         fields_collection = form_ref.collection("fields")
         for field in fields:
-            field_id = str(uuid.uuid4())  # Unique ID for each field
+            existing_fields = fields_collection.where("label", "==", field.get("label", "")).where("type", "==", field.get("type", "")).stream()
+            field_id = None
+
+            for existing_field in existing_fields:
+                field_id = existing_field.id  # Get existing field ID if found
+
+            if not field_id:
+                field_id = str(uuid.uuid4())  # New field ID if it doesn't exist
+
             field_doc = {
                 "label": field.get("label", ""),
                 "type": field.get("type", ""),
-                "options": field.get("options", []),  # Store options as an array
+                "options": field.get("options", []),
                 "correct_option": field.get("correct_option", ""),
                 "required": field.get("required", False)
             }
-            fields_collection.document(field_id).set(field_doc, merge=True)
+            fields_collection.document(field_id).set(field_doc, merge=True)  # Ensure merging
 
-    # Fetch updated fields from Firestore
     fields_snapshot = form_ref.collection("fields").stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
 
     return jsonify({
         "form_id": form_id,
-        "title": updated_data.get("title", form_doc.to_dict().get("title", "Untitled-Form")),
+        "title": updated_data.get("title", form_doc.to_dict().get("title", "Untitled Form")),
         "desc": updated_data.get("desc", form_doc.to_dict().get("desc", "No description")),
         "fields": updated_fields
     }), 200
