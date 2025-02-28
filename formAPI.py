@@ -91,7 +91,7 @@ def updateForm(form_id):
                 "correct_option": field.get("correct_option", ""),
                 "required": field.get("required", False)
             }
-            fields_collection.document(field_id).set(field_doc)
+            fields_collection.document(field_id).set(field_doc, merge=True)
 
     # Fetch updated fields from Firestore
     fields_snapshot = form_ref.collection("fields").stream()
