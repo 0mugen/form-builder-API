@@ -51,14 +51,6 @@ def debugForm(form_id):
     form_data = form_doc.to_dict() or {}
     return jsonify(form_data), 200
 
-
-import uuid
-from flask import Flask, request, jsonify
-from firebase_admin import firestore
-
-app = Flask(__name__)
-db = firestore.client()
-
 @app.route('/update-form/<form_id>', methods=['POST'])
 def updateForm(form_id):
     data = request.json
