@@ -16,7 +16,7 @@ if not firebase_admin._apps:
 # Get Firestore database reference
 db = firestore.client()
 
-@app.route('/create-form', methods=['POST'])
+@app.route('/create-form', methods=['GET'])
 def createForm():
     data = request.json
     form_id = str(uuid.uuid4())
