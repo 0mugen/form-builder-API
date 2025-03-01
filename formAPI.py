@@ -58,6 +58,7 @@ def updateForm(form_id):
     fields = data.get("fields", [])  
     title = data.get("title")  
     desc = data.get("desc")  
+    field_type = data.get("field_type")
 
     if not form_id:
         return jsonify({"error": "Missing form_id"}), 400
@@ -77,8 +78,22 @@ def updateForm(form_id):
     if updated_data:
         form_ref.set(updated_data, merge=True)  # Merge update
 
+    fields_collection = form_ref.collection("fields")
+
+    # Add new field based on field_type if provided
+    if field_type:
+        new_field_id = str(uuid.uuid4())  # Unique ID for the new field
+        new_field_doc = {
+            "label": "New " + field_type.capitalize(),
+            "type": field_type,
+            "options": [],
+            "correct_option": "",
+            "required": False
+        }
+        fields_collection.document(new_field_id).set(new_field_doc)
+
+    # Process the list of fields
     if fields:
-        fields_collection = form_ref.collection("fields")
         for field in fields:
             existing_fields = fields_collection.where("label", "==", field.get("label", "")).where("type", "==", field.get("type", "")).stream()
             field_id = None
@@ -87,7 +102,7 @@ def updateForm(form_id):
                 field_id = existing_field.id  # Get existing field ID if found
 
             if not field_id:
-                field_id = str(uuid.uuid4())  # New field ID if it doesn't exist
+                field_id = str(uuid.uuid4())  # Generate a new field ID if it doesn't exist
 
             field_doc = {
                 "label": field.get("label", ""),
@@ -96,8 +111,9 @@ def updateForm(form_id):
                 "correct_option": field.get("correct_option", ""),
                 "required": field.get("required", False)
             }
-            fields_collection.document(field_id).set(field_doc, merge=True)  # Ensure merging
+            fields_collection.document(field_id).set(field_doc, merge=True)  # Merge update
 
+    # Retrieve updated fields
     fields_snapshot = form_ref.collection("fields").stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
 
