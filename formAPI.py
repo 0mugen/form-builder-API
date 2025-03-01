@@ -85,25 +85,25 @@ def updateForm(form_id):
     print(f"Updating fields for form {form_id}")
 
     for field in fields:
+        field_id = field.get("id")  # Ensure ID is passed from the frontend
         field_label = field.get("label", "")
-        field_type_from_field = field.get("type", "")
-
-        if field_label and field_type_from_field:
-            print(f"Checking existing fields with label: {field_label}, type: {field_type_from_field}")
-            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type_from_field).stream()
-            field_id = None
-
+        field_type = field.get("type", "")
+    
+        if not field_id:  
+            # If no ID is provided, check if an existing field has the same label and type
+            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type).stream()
             for existing_field in existing_fields:
-                field_id = existing_field.id
-                print(f"Found existing field: {field_id}")
+                field_id = existing_field.id  # Assign the existing field ID if found
+                break
+    
+        if field_id:
+            print(f"Updating existing field {field_id}")
+            fields_collection.document(field_id).set(field, merge=True)
+        else:
+            print(f"Creating new field: {field_label}, type: {field_type}")
+            new_field_id = str(uuid.uuid4())
+            fields_collection.document(new_field_id).set(field, merge=True)
 
-            if field_id:
-                print(f"Updating existing field {field_id}")
-                fields_collection.document(field_id).set(field, merge=True)
-            else:
-                print(f"Creating new field: {field_label}, type: {field_type_from_field}")
-                new_field_id = str(uuid.uuid4())
-                fields_collection.document(new_field_id).set(field, merge=True)
 
     if not field_type:
         print("No field_type provided. Skipping field creation.")
