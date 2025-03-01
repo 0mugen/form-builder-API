@@ -87,11 +87,11 @@ def updateForm(form_id):
     for field in fields:
         field_id = field.get("id")  # Ensure ID is passed from the frontend
         field_label = field.get("label", "")
-        field_type = field.get("type", "")
+        field_type_from_fields = field.get("type", "")
     
         if not field_id:  
             # If no ID is provided, check if an existing field has the same label and type
-            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type).stream()
+            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type_from_fields).stream()
             for existing_field in existing_fields:
                 field_id = existing_field.id  # Assign the existing field ID if found
                 break
@@ -100,7 +100,7 @@ def updateForm(form_id):
             print(f"Updating existing field {field_id}")
             fields_collection.document(field_id).set(field, merge=True)
         else:
-            print(f"Creating new field: {field_label}, type: {field_type}")
+            print(f"Creating new field: {field_label}, type: {field_type_from_fields}")
             new_field_id = str(uuid.uuid4())
             fields_collection.document(new_field_id).set(field, merge=True)
 
