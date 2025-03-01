@@ -107,7 +107,7 @@ def updateForm(form_id):
 
     if not field_type:
         print("No field_type provided. Skipping field creation.")
-        return jsonify({"error": "Missing field_type"}), 400
+        # return jsonify({"error": "Missing field_type"}), 400
    
     if field_type:
         print(f"Adding new field with type: {field_type}")
