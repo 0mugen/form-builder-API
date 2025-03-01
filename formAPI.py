@@ -106,9 +106,9 @@ def updateForm(form_id):
                 fields_collection.document(new_field_id).set(field, merge=True)
 
     if not field_type:
-    print("No field_type provided. Skipping field creation.")
-    return jsonify({"error": "Missing field_type"}), 400
-
+        print("No field_type provided. Skipping field creation.")
+        return jsonify({"error": "Missing field_type"}), 400
+   
    if field_type:
     print(f"Adding new field with type: {field_type}")
     new_field_id = str(uuid.uuid4())
