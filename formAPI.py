@@ -51,6 +51,7 @@ def debugForm(form_id):
     form_data = form_doc.to_dict() or {}
     return jsonify(form_data), 200
 
+
 @app.route('/update-form/<form_id>', methods=['POST'])
 def updateForm(form_id):
     data = request.json
@@ -79,30 +80,34 @@ def updateForm(form_id):
 
     fields_collection = form_ref.collection("fields")
 
-    # Handle updating existing fields by label & type
+    # Debugging: Check if existing fields are found
+    print(f"Updating fields for form {form_id}")
+
     for field in fields:
         field_label = field.get("label", "")
         field_type = field.get("type", "")
 
         if field_label and field_type:
-            # Search for an existing field with the same label & type
+            print(f"Checking existing fields with label: {field_label}, type: {field_type}")
             existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type).stream()
             field_id = None
 
             for existing_field in existing_fields:
-                field_id = existing_field.id  # Get the existing field's Firestore document ID
-            
+                field_id = existing_field.id
+                print(f"Found existing field: {field_id}")
+
             if field_id:
-                # If found, update the existing field
+                print(f"Updating existing field {field_id}")
                 fields_collection.document(field_id).set(field, merge=True)
             else:
-                # If not found, create a new document
-                new_field_id = str(uuid.uuid4())  # Generate unique ID
+                print(f"Creating new field: {field_label}, type: {field_type}")
+                new_field_id = str(uuid.uuid4())
                 fields_collection.document(new_field_id).set(field, merge=True)
 
-    # Handle adding a new field if field_type is provided
+    # Debugging: Ensure field creation
     if field_type:
-        new_field_id = str(uuid.uuid4())  # Generate unique ID
+        print(f"Adding new field with type: {field_type}")
+        new_field_id = str(uuid.uuid4())
         new_field = {
             "label": f"New {field_type}",
             "type": field_type,
@@ -112,9 +117,10 @@ def updateForm(form_id):
         }
         fields_collection.document(new_field_id).set(new_field, merge=True)
 
-    # Retrieve updated fields
     fields_snapshot = fields_collection.stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
+
+    print(f"Updated fields: {updated_fields}")  # Debugging final fields
 
     return jsonify({
         "form_id": form_id,
