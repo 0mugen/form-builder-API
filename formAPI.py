@@ -109,18 +109,18 @@ def updateForm(form_id):
         print("No field_type provided. Skipping field creation.")
         return jsonify({"error": "Missing field_type"}), 400
    
-   if field_type:
-    print(f"Adding new field with type: {field_type}")
-    new_field_id = str(uuid.uuid4())
-    new_field = {
-        "label": f"New {field_type}",
-        "type": field_type,
-        "options": [],
-        "correct_option": "",
-        "required": False
-    }
-    fields_collection.document(new_field_id).set(new_field, merge=True)
-    print(f"New field {new_field_id} added successfully!")
+    if field_type:
+        print(f"Adding new field with type: {field_type}")
+        new_field_id = str(uuid.uuid4())
+        new_field = {
+            "label": f"New {field_type}",
+            "type": field_type,
+            "options": [],
+            "correct_option": "",
+            "required": False
+        }
+        fields_collection.document(new_field_id).set(new_field, merge=True)
+        print(f"New field {new_field_id} added successfully!")
 
 
     fields_snapshot = fields_collection.stream()
