@@ -52,13 +52,20 @@ def debugForm(form_id):
     return jsonify(form_data), 200
 
 
+import uuid
+from flask import Flask, request, jsonify
+from firebase_admin import firestore
+
+app = Flask(__name__)
+db = firestore.client()
+
 @app.route('/update-form/<form_id>', methods=['POST'])
 def updateForm(form_id):
     data = request.json
     fields = data.get("fields", [])  
     title = data.get("title")  
     desc = data.get("desc")  
-    field_type = data.get("field_type")
+    field_type = data.get("field_type")  
 
     if not form_id:
         return jsonify({"error": "Missing form_id"}), 400
@@ -76,45 +83,45 @@ def updateForm(form_id):
         updated_data["desc"] = desc
 
     if updated_data:
-        form_ref.set(updated_data, merge=True)  # Merge update
+        form_ref.set(updated_data, merge=True)
 
     fields_collection = form_ref.collection("fields")
 
-    # Add new field based on field_type if provided
+    # Handle updating existing fields by label & type
+    for field in fields:
+        field_label = field.get("label", "")
+        field_type = field.get("type", "")
+
+        if field_label and field_type:
+            # Search for an existing field with the same label & type
+            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type).stream()
+            field_id = None
+
+            for existing_field in existing_fields:
+                field_id = existing_field.id  # Get the existing field's Firestore document ID
+            
+            if field_id:
+                # If found, update the existing field
+                fields_collection.document(field_id).set(field, merge=True)
+            else:
+                # If not found, create a new document
+                new_field_id = str(uuid.uuid4())  # Generate unique ID
+                fields_collection.document(new_field_id).set(field, merge=True)
+
+    # Handle adding a new field if field_type is provided
     if field_type:
-        new_field_id = str(uuid.uuid4())  # Unique ID for the new field
-        new_field_doc = {
-            "label": "New " + field_type.capitalize(),
+        new_field_id = str(uuid.uuid4())  # Generate unique ID
+        new_field = {
+            "label": f"New {field_type}",
             "type": field_type,
             "options": [],
             "correct_option": "",
             "required": False
         }
-        fields_collection.document(new_field_id).set(new_field_doc)
-
-    # Process the list of fields
-    if fields:
-        for field in fields:
-            existing_fields = fields_collection.where("label", "==", field.get("label", "")).where("type", "==", field.get("type", "")).stream()
-            field_id = None
-
-            for existing_field in existing_fields:
-                field_id = existing_field.id  # Get existing field ID if found
-
-            if not field_id:
-                field_id = str(uuid.uuid4())  # Generate a new field ID if it doesn't exist
-
-            field_doc = {
-                "label": field.get("label", ""),
-                "type": field.get("type", ""),
-                "options": field.get("options", []),
-                "correct_option": field.get("correct_option", ""),
-                "required": field.get("required", False)
-            }
-            fields_collection.document(field_id).set(field_doc, merge=True)  # Merge update
+        fields_collection.document(new_field_id).set(new_field, merge=True)
 
     # Retrieve updated fields
-    fields_snapshot = form_ref.collection("fields").stream()
+    fields_snapshot = fields_collection.stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
 
     return jsonify({
@@ -123,6 +130,7 @@ def updateForm(form_id):
         "desc": updated_data.get("desc", form_doc.to_dict().get("desc", "No description")),
         "fields": updated_fields
     }), 200
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)  # Required for Render
