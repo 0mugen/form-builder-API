@@ -58,7 +58,8 @@ def updateForm(form_id):
     fields = data.get("fields", [])  
     title = data.get("title")  
     desc = data.get("desc")  
-    field_type = data.get("field_type")  
+    field_type = data.get("field_type")
+    print(f"Received field_type: {field_type}")
 
     if not form_id:
         return jsonify({"error": "Missing form_id"}), 400
@@ -104,18 +105,23 @@ def updateForm(form_id):
                 new_field_id = str(uuid.uuid4())
                 fields_collection.document(new_field_id).set(field, merge=True)
 
-    # Debugging: Ensure field creation
-    if field_type:
-        print(f"Adding new field with type: {field_type}")
-        new_field_id = str(uuid.uuid4())
-        new_field = {
-            "label": f"New {field_type}",
-            "type": field_type,
-            "options": [],
-            "correct_option": "",
-            "required": False
-        }
-        fields_collection.document(new_field_id).set(new_field, merge=True)
+    if not field_type:
+    print("No field_type provided. Skipping field creation.")
+    return jsonify({"error": "Missing field_type"}), 400
+
+   if field_type:
+    print(f"Adding new field with type: {field_type}")
+    new_field_id = str(uuid.uuid4())
+    new_field = {
+        "label": f"New {field_type}",
+        "type": field_type,
+        "options": [],
+        "correct_option": "",
+        "required": False
+    }
+    fields_collection.document(new_field_id).set(new_field, merge=True)
+    print(f"New field {new_field_id} added successfully!")
+
 
     fields_snapshot = fields_collection.stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
