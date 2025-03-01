@@ -18,12 +18,12 @@ db = firestore.client()
 
 @app.route('/create-form', methods=['GET'])
 def createForm():
-    data = request.json
     form_id = str(uuid.uuid4())
 
     form_doc = {
-        'title': data.get("title", "Untitled Form"),
-        'desc': data.get("desc", "No description...")
+        'title': "Untitled Form",
+        'desc': "No description...",
+        'fields': []
     }
 
     db.collection('Forms').document(form_id).set(form_doc)
@@ -40,6 +40,34 @@ def returnAllFields(form_id):
     form_data = form_doc.to_dict()
     return form_data.get("fields", [])  # Ensure "fields" key exists
 
+def parse_formatted_string(input_str):
+    groups = input_str.split("@@@@@")  # Split different form groups
+    result = []
+
+    for group in groups:
+        fields = group.split(",,,,,")  # Split key-value pairs
+        form_dict = {}
+
+        for field in fields:
+            if ":::::" in field:
+                key, value = field.split(":::::", 1)
+                value = value.strip()
+
+                # Convert boolean values
+                if value.lower() == "true":
+                    value = True
+                elif value.lower() == "false":
+                    value = False
+
+                # Convert list values (detects `,,,` as a separator)
+                elif ",,," in value:
+                    value = value.split(",,,")  # Convert to list
+
+                form_dict[key] = value  # Store in dictionary
+
+        result.append(form_dict)
+
+    return result
 
 def debugForm(form_id):
     form_ref = db.collection("Forms").document(form_id)
@@ -52,13 +80,11 @@ def debugForm(form_id):
     return jsonify(form_data), 200
 
 
-@app.route('/update-form/<form_id>', methods=['POST'])
-def updateForm(form_id):
-    data = request.json
-    fields = data.get("fields", [])  
-    title = data.get("title")  
-    desc = data.get("desc")  
-    field_type = data.get("field_type")
+@app.route('/update-form/<form_id>/<form_title>/<form_desc>/<fields>/<field_type>', methods=['GET'])
+def updateForm(form_id, form_title, form_desc, fields, field_type): 
+    title = form_title
+    desc = form_desc
+    fields = parse_formatted_string(fields)
     print(f"Received field_type: {field_type}")
 
     if not form_id:
@@ -134,7 +160,5 @@ def updateForm(form_id):
         "desc": updated_data.get("desc", form_doc.to_dict().get("desc", "No description")),
         "fields": updated_fields
     }), 200
-
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)  # Required for Render
