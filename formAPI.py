@@ -86,11 +86,11 @@ def updateForm(form_id):
 
     for field in fields:
         field_label = field.get("label", "")
-        field_type = field.get("type", "")
+        field_type_from_field = field.get("type", "")
 
-        if field_label and field_type:
-            print(f"Checking existing fields with label: {field_label}, type: {field_type}")
-            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type).stream()
+        if field_label and field_type_from_field:
+            print(f"Checking existing fields with label: {field_label}, type: {field_type_from_field}")
+            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type_from_field).stream()
             field_id = None
 
             for existing_field in existing_fields:
@@ -101,7 +101,7 @@ def updateForm(form_id):
                 print(f"Updating existing field {field_id}")
                 fields_collection.document(field_id).set(field, merge=True)
             else:
-                print(f"Creating new field: {field_label}, type: {field_type}")
+                print(f"Creating new field: {field_label}, type: {field_type_from_field}")
                 new_field_id = str(uuid.uuid4())
                 fields_collection.document(new_field_id).set(field, merge=True)
 
