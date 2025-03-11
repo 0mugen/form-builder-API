@@ -1,13 +1,84 @@
-from flask import Flask, jsonify
+import os
+import firebase_admin
+from firebase_admin import credentials, firestore
+from flask import jsonify, Flask, request
+from flask_cors import CORS  # Added CORS support
 import uuid
-from firebase_admin import firestore
 
-db = firestore.client()
 app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend access
 
-def parse_formatted_string(fields):
-    # Assuming this function processes and returns a list of field dictionaries
-    return fields
+# Load Firestore credentials from environment variable
+cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/etc/secrets/formAPIkey.json")
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(credentials.Certificate(cred_path))
+
+# Get Firestore database reference
+db = firestore.client()
+
+@app.route('/create-form', methods=['GET'])
+def createForm():
+    form_id = str(uuid.uuid4())
+
+    form_doc = {
+        'title': "Untitled Form",
+        'desc': "No description...",
+        'fields': []
+    }
+
+    db.collection('Forms').document(form_id).set(form_doc)
+    return jsonify({"success": True, "message": "Form created", "form_id": form_id}), 201
+
+
+def returnAllFields(form_id):
+    form_ref = db.collection("Forms").document(form_id)
+    form_doc = form_ref.get()
+
+    if not form_doc.exists:
+        return []
+
+    form_data = form_doc.to_dict()
+    return form_data.get("fields", [])  # Ensure "fields" key exists
+
+def parse_formatted_string(input_str):
+    groups = input_str.split("@@@@@")  # Split different form groups
+    result = []
+
+    for group in groups:
+        fields = group.split(",,,,,")  # Split key-value pairs
+        form_dict = {}
+
+        for field in fields:
+            if ":::::" in field:
+                key, value = field.split(":::::", 1)
+                value = value.strip()
+
+                # Convert boolean values
+                if value.lower() == "true":
+                    value = True
+                elif value.lower() == "false":
+                    value = False
+
+                # Convert list values (detects `,,,` as a separator)
+                elif ",,," in value:
+                    value = value.split(",,,")  # Convert to list
+
+                form_dict[key] = value  # Store in dictionary
+
+        result.append(form_dict)
+
+    return result
+
+def debugForm(form_id):
+    form_ref = db.collection("Forms").document(form_id)
+    form_doc = form_ref.get()
+
+    if not form_doc.exists:
+        return jsonify({"error": "Form not found"}), 404
+
+    form_data = form_doc.to_dict() or {}
+    return jsonify(form_data), 200
+
 
 @app.route('/update-form-metadata/<form_id>/<form_title>/<form_desc>', methods=['GET'])
 def update_form_metadata(form_id, form_title, form_desc):
@@ -29,7 +100,15 @@ def update_form_metadata(form_id, form_title, form_desc):
     if updated_data:
         form_ref.set(updated_data, merge=True)
     
-    return jsonify({"message": "Form metadata updated successfully"}), 200
+     # Fetch updated document
+    updated_doc = form_ref.get().to_dict()
+    
+    return jsonify({
+            "message": "Form metadata updated successfully", 
+            "title": updated_doc.get("title", "Untitled Form"), 
+            "desc": updated_doc.get("desc", "No description")
+        }), 200
+
 
 @app.route('/update-form-fields/<form_id>/<field_id>/<fields>', methods=['GET'])
 def update_form_fields(form_id, field_id, fields):
@@ -72,3 +151,7 @@ def add_form_field(form_id, field_type):
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
     
     return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields}), 200
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)  # Required for Render
