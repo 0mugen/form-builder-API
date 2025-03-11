@@ -8,14 +8,11 @@ import uuid
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend access
 
-# Load Firestore credentials from environment variable
-cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/etc/secrets/formAPIkey.json")
 if not firebase_admin._apps:
-    firebase_admin.initialize_app(credentials.Certificate(cred_path))
+    firebase_admin.initialize_app(credentials.Certificate('formAPIkey.json'))
 
 # Get Firestore database reference
 db = firestore.client()
-
 @app.route('/create-form', methods=['GET'])
 def createForm():
     form_id = str(uuid.uuid4())
@@ -80,13 +77,8 @@ def debugForm(form_id):
     return jsonify(form_data), 200
 
 
-@app.route('/update-form/<form_id>/<form_title>/<form_desc>/<fields>/<field_type>', methods=['GET'])
-def updateForm(form_id, form_title, form_desc, fields, field_type): 
-    title = form_title
-    desc = form_desc
-    fields = parse_formatted_string(fields)
-    print(f"Received field_type: {field_type}")
-
+@app.route('/update-form-metadata/<form_id>/<form_title>/<form_desc>', methods=['GET'])
+def update_form_metadata(form_id, form_title, form_desc):
     if not form_id:
         return jsonify({"error": "Missing form_id"}), 400
 
@@ -97,68 +89,52 @@ def updateForm(form_id, form_title, form_desc, fields, field_type):
         return jsonify({"error": "Form not found"}), 404
 
     updated_data = {}
-    if title is not None:
-        updated_data["title"] = title
-    if desc is not None:
-        updated_data["desc"] = desc
+    if form_title:
+        updated_data["title"] = form_title
+    if form_desc:
+        updated_data["desc"] = form_desc
 
     if updated_data:
         form_ref.set(updated_data, merge=True)
+    
+    return jsonify({"message": "Form metadata updated successfully"}), 200
 
+@app.route('/update-form-fields/<form_id>/<field_id>/<fields>', methods=['GET'])
+def update_form_fields(form_id, field_id, fields):
+    fields = parse_formatted_string(fields)
+    form_ref = db.collection("Forms").document(form_id)
     fields_collection = form_ref.collection("fields")
-
-    # Debugging: Check if existing fields are found
-    print(f"Updating fields for form {form_id}")
-
+    
+    field_ref = fields_collection.document(field_id)
+    field_doc = field_ref.get()
+    
+    if not field_doc.exists:
+        return jsonify({"error": "Field not found"}), 404
+    
     for field in fields:
-        field_id = field.get("id")  # Ensure ID is passed from the frontend
-        field_label = field.get("label", "")
-        field_type_from_fields = field.get("type", "")
+        field_ref.set(field, merge=True)
     
-        if not field_id:  
-            # If no ID is provided, check if an existing field has the same label and type
-            existing_fields = fields_collection.where("label", "==", field_label).where("type", "==", field_type_from_fields).stream()
-            for existing_field in existing_fields:
-                field_id = existing_field.id  # Assign the existing field ID if found
-                break
-    
-        if field_id:
-            print(f"Updating existing field {field_id}")
-            fields_collection.document(field_id).set(field, merge=True)
-        else:
-            print(f"Creating new field: {field_label}, type: {field_type_from_fields}")
-            new_field_id = str(uuid.uuid4())
-            fields_collection.document(new_field_id).set(field, merge=True)
+    return jsonify({"message": "Field updated successfully"}), 200
 
-
+@app.route('/add-form-field/<form_id>/<field_type>', methods=['GET'])
+def add_form_field(form_id, field_type):
     if not field_type:
-        print("No field_type provided. Skipping field creation.")
-        # return jsonify({"error": "Missing field_type"}), 400
-   
-    if field_type:
-        print(f"Adding new field with type: {field_type}")
-        new_field_id = str(uuid.uuid4())
-        new_field = {
-            "label": f"New {field_type}",
-            "type": field_type,
-            "options": [],
-            "correct_option": "",
-            "required": False
-        }
-        fields_collection.document(new_field_id).set(new_field, merge=True)
-        print(f"New field {new_field_id} added successfully!")
+        return jsonify({"error": "Missing field_type"}), 400
+    
+    form_ref = db.collection("Forms").document(form_id)
+    fields_collection = form_ref.collection("fields")
+    new_field_id = str(uuid.uuid4())
+    new_field = {
+        "label": f"New {field_type}",
+        "type": field_type,
+        "options": [],
+        "correct_option": "",
+        "required": False
+    }
+    fields_collection.document(new_field_id).set(new_field, merge=True)
+    
+    return jsonify({"message": "New field added successfully", "field_id": new_field_id}), 200
 
 
-    fields_snapshot = fields_collection.stream()
-    updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
-
-    print(f"Updated fields: {updated_fields}")  # Debugging final fields
-
-    return jsonify({
-        "form_id": form_id,
-        "title": updated_data.get("title", form_doc.to_dict().get("title", "Untitled Form")),
-        "desc": updated_data.get("desc", form_doc.to_dict().get("desc", "No description")),
-        "fields": updated_fields
-    }), 200
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)  # Required for Render
