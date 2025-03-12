@@ -152,6 +152,33 @@ def add_form_field(form_id, field_type):
     
     return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields}), 200
 
+@app.route('/delete-form/<form_id>', methods=['GET'])
+def delete_form(form_id):
+    form_ref = db.collection("Forms").document(form_id)
+    form_doc = form_ref.get()
+    
+    if not form_doc.exists:
+        return jsonify({"error": "Form not found"}), 404
+    
+    form_ref.delete()
+    return jsonify({"message": "Form deleted successfully"}), 200
+
+@app.route('/delete-form-field/<form_id>/<field_id>', methods=['GET'])
+def delete_form_field(form_id, field_id):
+    form_ref = db.collection("Forms").document(form_id)
+    fields_collection = form_ref.collection("fields")
+    field_ref = fields_collection.document(field_id)
+    field_doc = field_ref.get()
+    
+    if not field_doc.exists:
+        return jsonify({"error": "Field not found"}), 404
+    
+    field_ref.delete()
+    
+    fields_snapshot = fields_collection.stream()
+    updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
+    
+    return jsonify({"message": "Field deleted successfully", "fields": updated_fields}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)  # Required for Render
