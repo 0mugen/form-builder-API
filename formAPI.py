@@ -110,9 +110,8 @@ def update_form_metadata(form_id, form_title, form_desc):
         }), 200
 
 
-@app.route('/update-form-fields/<form_id>/<field_id>/<fields>', methods=['GET'])
-def update_form_fields(form_id, field_id, fields):
-    fields = parse_formatted_string(fields)
+@app.route('/update-form-fields/<form_id>/<field_id>/<field_type>', methods=['GET'])
+def update_form_fields(form_id, field_id, field_type):
     form_ref = db.collection("Forms").document(form_id)
     fields_collection = form_ref.collection("fields")
     
@@ -122,13 +121,25 @@ def update_form_fields(form_id, field_id, fields):
     if not field_doc.exists:
         return jsonify({"error": "Field not found"}), 404
     
-    for field in fields:
-        field_ref.set(field, merge=True)
+    # Extract query parameters
+    update_data = {}
+    if "label" in request.args:
+        update_data["label"] = request.args.get("label")
+    if "required" in request.args:
+        update_data["required"] = request.args.get("required").lower() == "true"
+    if "options" in request.args:
+        update_data["options"] = request.args.get("options").split(",")
+    if "correct_option" in request.args:
+        update_data["correct_option"] = request.args.get("correct_option")
+    
+    if update_data:
+        field_ref.set(update_data, merge=True)
     
     fields_snapshot = fields_collection.stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
     
     return jsonify({"message": "Field updated successfully", "fields": updated_fields}), 200
+
 
 @app.route('/add-form-field/<form_id>/<field_type>', methods=['GET'])
 def add_form_field(form_id, field_type):
