@@ -127,7 +127,7 @@ def update_form_fields(form_id, field_id, field_type):
     if "required" in request.args:
         update_data["required"] = request.args.get("required").lower() == "true"
     if "options" in request.args:
-        new_options = request.args.get("options").split(",")
+        # new_options = request.args.get("options").split(",")
         existing_options = field_doc.to_dict().get("options", [])
         update_data["options"] = list(set(existing_options + new_options))
     if "correct_option" in request.args:
