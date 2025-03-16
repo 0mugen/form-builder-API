@@ -129,7 +129,9 @@ def update_form_fields(form_id, field_id, field_type):
     if "options" in request.args:
         new_option = request.args.get("options")
         existing_options = field_doc.to_dict().get("options", [])
-        update_data["options"] = list(set(existing_options + new_option))
+        if new_option not in existing_options:
+            existing_options.append(new_option)
+        update_data["options"] = existing_options
     if "correct_option" in request.args:
         update_data["correct_option"] = request.args.get("correct_option")
     
