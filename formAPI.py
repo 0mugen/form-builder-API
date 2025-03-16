@@ -149,19 +149,21 @@ def add_form_field(form_id, field_type):
     form_ref = db.collection("Forms").document(form_id)
     fields_collection = form_ref.collection("fields")
     new_field_id = str(uuid.uuid4())
+    timestamp = datetime.utcnow().isoformat()
     new_field = {
         "label": f"New {field_type}",
         "type": field_type,
         "options": [],
         "correct_option": "",
-        "required": False
+        "required": False,
+        "created_at": timestamp
     }
     fields_collection.document(new_field_id).set(new_field, merge=True)
     
     fields_snapshot = fields_collection.stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
     
-    return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields}), 200
+    return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields, "created_at": timestamp}), 200
 
 @app.route('/delete-form/<form_id>', methods=['GET'])
 def delete_form(form_id):
