@@ -134,6 +134,13 @@ def update_form_fields(form_id, field_id, field_type):
         update_data["options"] = existing_options
     if "correct_option" in request.args:
         update_data["correct_option"] = request.args.get("correct_option")
+    if "remove_option" in request.args:
+        remove_option = request.args.get("remove_option")
+        existing_options = field_doc.to_dict().get("options", [])
+        if remove_option in existing_options:
+            existing_options.remove(remove_option)
+        update_data["options"] = existing_options
+
     
     if update_data:
         field_ref.set(update_data, merge=True)
