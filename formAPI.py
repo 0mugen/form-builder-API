@@ -121,14 +121,15 @@ def update_form_fields(form_id, field_id, field_type):
     if not field_doc.exists:
         return jsonify({"error": "Field not found"}), 404
     
-    # Extract query parameters
     update_data = {}
     if "label" in request.args:
         update_data["label"] = request.args.get("label")
     if "required" in request.args:
         update_data["required"] = request.args.get("required").lower() == "true"
     if "options" in request.args:
-        update_data["options"] = request.args.get("options").split(",")
+        new_options = request.args.get("options").split(",")
+        existing_options = field_doc.to_dict().get("options", [])
+        update_data["options"] = list(set(existing_options + new_options))
     if "correct_option" in request.args:
         update_data["correct_option"] = request.args.get("correct_option")
     
@@ -140,7 +141,6 @@ def update_form_fields(form_id, field_id, field_type):
     
     return jsonify({"message": "Field updated successfully", "fields": updated_fields}), 200
 
-
 @app.route('/add-form-field/<form_id>/<field_type>', methods=['GET'])
 def add_form_field(form_id, field_type):
     if not field_type:
@@ -149,21 +149,20 @@ def add_form_field(form_id, field_type):
     form_ref = db.collection("Forms").document(form_id)
     fields_collection = form_ref.collection("fields")
     new_field_id = str(uuid.uuid4())
-    timestamp = datetime.utcnow().isoformat()
     new_field = {
         "label": f"New {field_type}",
         "type": field_type,
         "options": [],
         "correct_option": "",
         "required": False,
-        "created_at": timestamp
+        "created_at": firestore.SERVER_TIMESTAMP
     }
     fields_collection.document(new_field_id).set(new_field, merge=True)
     
     fields_snapshot = fields_collection.stream()
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
     
-    return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields, "created_at": timestamp}), 200
+    return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields}), 200
 
 @app.route('/delete-form/<form_id>', methods=['GET'])
 def delete_form(form_id):
