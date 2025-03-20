@@ -80,8 +80,8 @@ def debugForm(form_id):
     return jsonify(form_data), 200
 
 
-@app.route('/update-form-metadata/<form_id>/<form_title>/<form_desc>', methods=['GET'])
-def update_form_metadata(form_id, form_title, form_desc):
+@app.route('/update-form-metadata/<form_id>', methods=['GET'])
+def update_form_metadata(form_id):
     if not form_id:
         return jsonify({"error": "Missing form_id"}), 400
 
@@ -92,15 +92,15 @@ def update_form_metadata(form_id, form_title, form_desc):
         return jsonify({"error": "Form not found"}), 404
 
     updated_data = {}
-    if form_title:
-        updated_data["title"] = form_title
-    if form_desc:
-        updated_data["desc"] = form_desc
+    if "form_title" in request.args:
+        updated_data["title"] = request.args.get("form_title")
+    if "form_desc" in request.args:
+        updated_data["desc"] = request.args.get("form_desc")
 
     if updated_data:
         form_ref.set(updated_data, merge=True)
     
-     # Fetch updated document
+    # Fetch updated document
     updated_doc = form_ref.get().to_dict()
     
     return jsonify({
