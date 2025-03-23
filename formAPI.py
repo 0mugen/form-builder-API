@@ -201,10 +201,11 @@ def update_response(response_id, field_id):
     label = request.args.get('label')
     answer = request.args.get('answer')
 
-    if not response_id or not field_id or not label or answer is None:
+    # Check for missing parameters
+    if not response_id or not field_id or not label or answer is None or answer.strip() == "":
         return jsonify({"error": "Missing required parameters"}), 400
 
-    # Convert checkbox answers back to a list
+    # Convert answer to a list (for checkboxes)
     answer_list = answer.split(",,") if ",," in answer else [answer]
 
     # Reference to Firestore
@@ -218,7 +219,6 @@ def update_response(response_id, field_id):
     }, merge=True)
 
     return jsonify({"message": "Response updated"}), 200
-
 
 @app.route('/delete-form/<form_id>', methods=['GET'])
 def delete_form(form_id):
