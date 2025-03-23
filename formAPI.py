@@ -176,32 +176,28 @@ def add_form_field(form_id, field_type):
 
 
 @app.route('/create-response', methods=['GET'])
-def create_response():
+def create_or_get_response():
     form_id = request.args.get('form_id')
     user_id = request.args.get('user_id')
 
     if not form_id or not user_id:
         return jsonify({"error": "Missing form_id or user_id"}), 400
 
-    # Reference to the responses collection
-    responses_ref = db.collection('Responses')
-    query = responses_ref.where('form_id', '==', form_id).where('user_id', '==', user_id).limit(1).stream()
+    responses_ref = db.collection("Responses")
+    existing_response = responses_ref.where("form_id", "==", form_id).where("user_id", "==", user_id).limit(1).stream()
 
-    # Check if response exists
-    response_doc = next(query, None)
-    
-    if response_doc:
-        return jsonify({"message": "Response already exists", "response_id": response_doc.id}), 200
+    for doc in existing_response:
+        return jsonify({"response_id": doc.id, "exists": True})  # Response exists
 
-    # Create a new response document
-    new_doc_ref = responses_ref.document()
-    new_doc_ref.set({
+    # If no response found, create one
+    new_response_ref = responses_ref.add({
         "form_id": form_id,
         "user_id": user_id,
-        "submitted_at": firestore.SERVER_TIMESTAMP
-    })
+        "submitted_at": firestore.SERVER_TIMESTAMP,
+        "fields": []
+    })[1]
 
-    return jsonify({"message": "Response created", "response_id": new_doc_ref.id}), 201
+    return jsonify({"response_id": new_response_ref.id, "exists": False})  # New response created
 
 @app.route('/update-response', methods=['GET'])
 def update_response():
