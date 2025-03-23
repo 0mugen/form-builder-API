@@ -199,7 +199,8 @@ def submit_form(form_id, user_id):
         for field in answers_data:
             response_ref.collection("responded_fields").document(field["field_id"]).set({
                 "label": field["label"],
-                "answer": field["answer"]
+                "answer": field["answer"],
+                "field_id": field["field_id"]
             })
 
         return jsonify({"message": "Form submitted successfully!", "response_id": response_ref.id}), 200
