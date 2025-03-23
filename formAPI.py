@@ -175,11 +175,8 @@ def add_form_field(form_id, field_type):
     return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields}), 200
 
 
-@app.route('/create-response', methods=['GET'])
-def create_or_get_response():
-    form_id = request.args.get('form_id')
-    user_id = request.args.get('user_id')
-
+@app.route('/create-response/<form_id>/<user_id>', methods=['GET'])
+def create_or_get_response(form_id, user_id):
     if not form_id or not user_id:
         return jsonify({"error": "Missing form_id or user_id"}), 400
 
