@@ -201,22 +201,21 @@ def update_response():
     response_id = request.args.get('response_id')
     field_id = request.args.get('field_id')
     label = request.args.get('label')
-    answer = request.args.getlist('answer')  # Get multiple values as a list
+    answer = request.args.get('answer')
 
-    if not response_id or not field_id or not label or not answer:
+    if not response_id or not field_id or not label or answer is None:
         return jsonify({"error": "Missing required parameters"}), 400
 
-    # Convert to a single value if it's not a list (for non-checkbox fields)
-    if len(answer) == 1:
-        answer = answer[0]  # Store single values as strings
+    # Convert checkbox answers back to a list
+    answer_list = answer.split(",,") if ",," in answer else [answer]
 
-    # Reference to the responded_fields subcollection
+    # Reference to Firestore
     field_ref = db.collection('Responses').document(response_id).collection('responded_fields').document(field_id)
 
-    # Update or create field response
+    # Store as a list if it's a checkbox field
     field_ref.set({
         "label": label,
-        "answer": answer,  # Store either a string or list
+        "answer": answer_list,  # Stores as an array
         "updated_at": firestore.SERVER_TIMESTAMP
     }, merge=True)
 
