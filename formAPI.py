@@ -201,24 +201,37 @@ def update_response(response_id, field_id):
     label = request.args.get('label')
     answer = request.args.get('answer')
 
-    # Check for missing parameters
-    if not response_id or not field_id or not label or answer is None or answer.strip() == "":
+    if not response_id or not field_id or not label or answer is None:
         return jsonify({"error": "Missing required parameters"}), 400
 
-    # Convert answer to a list (for checkboxes)
+    # Convert checkbox answers back to a list
     answer_list = answer.split(",,") if ",," in answer else [answer]
 
-    # Reference to Firestore
-    field_ref = db.collection('Responses').document(response_id).collection('responded_fields').document(field_id)
+    try:
+        print(f"Updating Response: {response_id}, Field: {field_id}")
+        print(f"Label: {label}, Answer: {answer_list}")
 
-    # Store as a list if it's a checkbox field
-    field_ref.set({
-        "label": label,
-        "answer": answer_list,  # Stores as an array
-        "updated_at": firestore.SERVER_TIMESTAMP
-    }, merge=True)
+        # Reference to Firestore
+        field_ref = db.collection('Responses').document(response_id).collection('responded_fields').document(field_id)
 
-    return jsonify({"message": "Response updated"}), 200
+        # Check if the document exists
+        doc = field_ref.get()
+        print(f"Document Exists: {doc.exists}")
+
+        # Store as a list if it's a checkbox field
+        field_ref.set({
+            "label": label,
+            "answer": answer_list,  # Stores as an array
+            "updated_at": firestore.SERVER_TIMESTAMP
+        }, merge=True)
+
+        print("Firestore Update Successful!")
+
+        return jsonify({"message": "Response updated"}), 200
+
+    except Exception as e:
+        print(f"Firestore Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/delete-form/<form_id>', methods=['GET'])
 def delete_form(form_id):
