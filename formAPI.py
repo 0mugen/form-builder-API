@@ -1,9 +1,8 @@
-import os
+import os, uuid, json
 import firebase_admin
 from firebase_admin import credentials, firestore
 from flask import jsonify, Flask, request
 from flask_cors import CORS  # Added CORS support
-import uuid
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend access
@@ -173,6 +172,39 @@ def add_form_field(form_id, field_type):
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
     
     return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields}), 200
+
+@app.route('/submit-form/<form_id>/<user_id>', methods=['GET'])
+def submit_form(form_id, user_id):
+    try:
+        # Extract answers from query parameters
+        answers = request.args.get("answers")  # Expected as a JSON string
+
+        if not answers:
+            return jsonify({"error": "Missing answers parameter"}), 400
+
+        try:
+            answers_data = json.loads(answers)  # Parse JSON safely
+        except json.JSONDecodeError:
+            return jsonify({"error": "Invalid answers format"}), 400
+
+        response_ref = db.collection("Responses").document()
+        response_ref.set({
+            "form_id": form_id,
+            "user_id": user_id,
+            "submitted_at": firestore.SERVER_TIMESTAMP
+        })
+
+        # Store each answer in the "fields" subcollection
+        for field in answers_data:
+            response_ref.collection("fields").document(field["field_id"]).set({
+                "label": field["label"],
+                "answer": field["answer"]
+            })
+
+        return jsonify({"message": "Form submitted successfully!", "response_id": response_ref.id}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/delete-form/<form_id>', methods=['GET'])
 def delete_form(form_id):
