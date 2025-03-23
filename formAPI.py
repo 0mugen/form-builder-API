@@ -197,7 +197,7 @@ def submit_form(form_id, user_id):
 
         # Store each answer in the "fields" subcollection
         for field in answers_data:
-            response_ref.collection("fields").document(field["field_id"]).set({
+            response_ref.collection("responded_fields").document(field["field_id"]).set({
                 "label": field["label"],
                 "answer": field["answer"]
             })
