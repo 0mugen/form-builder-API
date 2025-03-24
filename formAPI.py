@@ -190,8 +190,7 @@ def create_or_get_response(form_id, user_id):
     new_response_ref = responses_ref.add({
         "form_id": form_id,
         "user_id": user_id,
-        "submitted_at": firestore.SERVER_TIMESTAMP,
-        "fields": []
+        "submitted_at": firestore.SERVER_TIMESTAMP
     })[1]
 
     return jsonify({"response_id": new_response_ref.id, "exists": False})  # New response created
@@ -223,6 +222,7 @@ def update_response(response_id, field_id):
             "label": label,
             "answer": answer_list,  # Stores as an array
             "updated_at": firestore.SERVER_TIMESTAMP
+            "field_id": field_id
         }, merge=True)
 
         print("Firestore Update Successful!")
