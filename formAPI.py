@@ -196,8 +196,9 @@ def create_or_get_response(form_id, user_id):
 
     return jsonify({"response_id": new_response_ref.id, "exists": False})  # New response created
 
-@app.route('/update-response/<response_id>', methods=['GET'])
-def update_response(response_id):
+@app.route('/update-response', methods=['GET'])
+def update_response():
+    response_id = request.args.get('response_id')
     field_id = request.args.get('field_id')
     label = request.args.get('label')
     answer = request.args.get('answer')
