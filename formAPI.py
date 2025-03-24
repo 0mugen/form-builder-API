@@ -221,7 +221,7 @@ def update_response(response_id, field_id):
         field_ref.set({
             "label": label,
             "answer": answer_list,  # Stores as an array
-            "updated_at": firestore.SERVER_TIMESTAMP
+            "updated_at": firestore.SERVER_TIMESTAMP,
             "field_id": field_id
         }, merge=True)
 
