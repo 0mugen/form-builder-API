@@ -268,6 +268,11 @@ def create_activity():
     try:
         user_id = request.args.get("user_id")
         form_id = request.args.get("form_id", "")
+        activity_title = request.args.get("activity_title", "New Activity")
+        activity_desc = request.args.get("activity_desc", "Description here")
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+        # status = request.args.get("status", "Pending")
 
         if not user_id:
             return jsonify({"error": "user_id is required"}), 400
@@ -275,12 +280,12 @@ def create_activity():
         activity_id = str(uuid.uuid4())
         activity_data = {
             "activity_id": activity_id,
-            "activity_title": "New Activity",
-            "activity_desc": "Description here",
-            "start_date": "",
-            "end_date": "",
+            "activity_title": activity_title,
+            "activity_desc": activity_desc,
+            "start_date": datetime.datetime.strptime(start_date, "%Y-%m-%d").date() if start_date else None,
+            "end_date": datetime.datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None,
             "created_on": firestore.SERVER_TIMESTAMP,
-            "status": "Pending",
+            # "status": status,
             "user_id": user_id,
             "form_id": form_id
         }
