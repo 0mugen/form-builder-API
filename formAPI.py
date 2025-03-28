@@ -17,12 +17,14 @@ db = firestore.client()
 
 @app.route('/create-form', methods=['GET'])
 def createForm():
+    user_id = request.args.get('user_id')
     form_id = str(uuid.uuid4())
 
     form_doc = {
         'title': "Untitled Form",
         'desc': "No description...",
         'fields': [],
+        "user_id": user_id,
         'form_id': form_id
     }
 
@@ -190,7 +192,8 @@ def create_or_get_response(form_id, user_id):
     new_response_ref = responses_ref.add({
         "form_id": form_id,
         "user_id": user_id,
-        "submitted_at": firestore.SERVER_TIMESTAMP
+        "submitted_at": firestore.SERVER_TIMESTAMP,
+        "fields": []
     })[1]
 
     return jsonify({"response_id": new_response_ref.id, "exists": False})  # New response created
@@ -221,8 +224,7 @@ def update_response(response_id, field_id):
         field_ref.set({
             "label": label,
             "answer": answer_list,  # Stores as an array
-            "updated_at": firestore.SERVER_TIMESTAMP,
-            "field_id": field_id
+            "updated_at": firestore.SERVER_TIMESTAMP
         }, merge=True)
 
         print("Firestore Update Successful!")
@@ -260,6 +262,83 @@ def delete_form_field(form_id, field_id):
     updated_fields = [{"id": field.id, **field.to_dict()} for field in fields_snapshot]
     
     return jsonify({"message": "Field deleted successfully", "fields": updated_fields}), 200
+
+@app.route('/create-activity', methods=['GET'])
+def create_activity():
+    try:
+        user_id = request.args.get("user_id")
+        form_id = request.args.get("form_id", "")
+
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+
+        activity_id = str(uuid.uuid4())
+        activity_data = {
+            "activity_id": activity_id,
+            "activity_title": "New Activity",
+            "activity_desc": "Description here",
+            "start_date": "",
+            "end_date": "",
+            "created_on": firestore.SERVER_TIMESTAMP,
+            "status": "Pending",
+            "user_id": user_id,
+            "form_id": form_id
+        }
+
+        db.collection("Activities").document(activity_id).set(activity_data)
+
+        return jsonify({"message": "Activity created successfully", "activity_id": activity_id}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/delete-activity/<activity_id>', methods=['GET'])
+def delete_activity(activity_id):
+    try:
+        activity_ref = db.collection("Activities").document(activity_id)
+        if not activity_ref.get().exists:
+            return jsonify({"error": "Activity not found"}), 404
+        
+        activity_ref.delete()
+        return jsonify({"message": "Activity deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/update-activity/<user_id>/<activity_id>', methods=['GET'])
+def update_activity(user_id, activity_id):
+    try:
+        data = request.args
+
+        activity_ref = db.collection('Activities').document(activity_id)
+        activity_doc = activity_ref.get()
+
+        if not activity_doc.exists:
+            return jsonify({"error": "Activity not found"}), 404
+
+        activity_data = activity_doc.to_dict()
+        if activity_data.get("user_id") != user_id:
+            return jsonify({"error": "Unauthorized access"}), 403
+
+        update_data = {}
+        for key in ["activity_title", "activity_desc", "status", "form_id", "is_event", "is_club"]:
+            if key in data:
+                update_data[key] = data.get(key)
+
+        for key in ["start_date", "end_date"]:
+            if key in data:
+                try:
+                    update_data[key] = datetime.datetime.strptime(data.get(key), "%Y-%m-%d")
+                except ValueError:
+                    return jsonify({"error": f"Invalid date format for {key}, expected YYYY-MM-DD"}), 400
+
+        if not update_data:
+            return jsonify({"error": "No fields to update"}), 400
+
+        update_data["updated_on"] = firestore.SERVER_TIMESTAMP
+        activity_ref.set(update_data, merge=True)
+
+        return jsonify({"message": "Activity updated successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)  # Required for Render
