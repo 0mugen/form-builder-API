@@ -331,7 +331,7 @@ def update_activity(user_id, activity_id):
         for key in ["start_date", "end_date"]:
             if key in data:
                 try:
-                    update_data[key] = datetime.datetime.strptime(data.get(key), "%Y-%m-%d")
+                    update_data[key] = datetime.datetime.strptime(data.get(key), "%d/%m/%Y")
                 except ValueError:
                     return jsonify({"error": f"Invalid date format for {key}, expected YYYY-MM-DD"}), 400
 
