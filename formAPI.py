@@ -189,14 +189,17 @@ def create_or_get_response(form_id, user_id):
         return jsonify({"response_id": doc.id, "exists": True})  # Response exists
 
     # If no response found, create one
-    new_response_ref = responses_ref.add({
+    new_response_ref = responses_ref.document()
+    response_id = new_response_ref.id  # Generate unique document ID
+    new_response_ref.set({
+        "response_id": response_id,
         "form_id": form_id,
         "user_id": user_id,
         "submitted_at": firestore.SERVER_TIMESTAMP,
         "fields": []
-    })[1]
+    })
 
-    return jsonify({"response_id": new_response_ref.id, "exists": False})  # New response created
+    return jsonify({"response_id": response_id, "exists": False})  # New response created
 
 @app.route('/update-response/<response_id>/<field_id>', methods=['GET'])
 def update_response(response_id, field_id):
