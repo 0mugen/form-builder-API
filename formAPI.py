@@ -211,7 +211,11 @@ def update_response(response_id, field_id):
         return jsonify({"error": "Missing required parameters"}), 400
 
     # Determine how to store the answer based on field type
-    update_data = {"label": label, "updated_at": firestore.SERVER_TIMESTAMP}
+    update_data = {
+        "label": label,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+        "field_id":field_id
+    }
 
     if field_type == "checkbox":
         update_data["answers"] = answer.split(",,") if ",," in answer else [answer]  # Store as list under 'answers'
