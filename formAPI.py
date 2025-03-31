@@ -210,15 +210,17 @@ def update_response(response_id, field_id):
     if not response_id or not field_id or not label or answer is None or not field_type:
         return jsonify({"error": "Missing required parameters"}), 400
 
-    # Convert checkbox answers to a list, otherwise store as a string
+    # Determine how to store the answer based on field type
+    update_data = {"label": label, "updated_at": firestore.SERVER_TIMESTAMP}
+
     if field_type == "checkbox":
-        answer_list = answer.split(",,") if ",," in answer else [answer]
+        update_data["answers"] = answer.split(",,") if ",," in answer else [answer]  # Store as list under 'answers'
     else:
-        answer_list = answer  # Store as a single value for other field types
+        update_data["answer"] = answer  # Store as a string under 'answer' for other field types
 
     try:
         print(f"Updating Response: {response_id}, Field: {field_id}")
-        print(f"Label: {label}, Answer: {answer_list}, Field Type: {field_type}")
+        print(f"Label: {label}, Field Type: {field_type}, Data: {update_data}")
 
         # Reference to Firestore
         field_ref = db.collection('Responses').document(response_id).collection('responded_fields').document(field_id)
@@ -228,12 +230,7 @@ def update_response(response_id, field_id):
         print(f"Document Exists: {doc.exists}")
 
         # Update Firestore
-        field_ref.set({
-            "label": label,
-            "answer": answer_list,  # Store as a list only for checkboxes
-            "updated_at": firestore.SERVER_TIMESTAMP,
-            "field_id": field_id
-        }, merge=True)
+        field_ref.set(update_data, merge=True)
 
         print("Firestore Update Successful!")
 
