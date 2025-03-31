@@ -205,16 +205,20 @@ def create_or_get_response(form_id, user_id):
 def update_response(response_id, field_id):
     label = request.args.get('label')
     answer = request.args.get('answer')
+    field_type = request.args.get('field_type')  # Get field type from request
 
-    if not response_id or not field_id or not label or answer is None:
+    if not response_id or not field_id or not label or answer is None or not field_type:
         return jsonify({"error": "Missing required parameters"}), 400
 
-    # Convert checkbox answers back to a list
-    answer_list = answer.split(",,") if ",," in answer else [answer]
+    # Convert checkbox answers to a list, otherwise store as a string
+    if field_type == "checkbox":
+        answer_list = answer.split(",,") if ",," in answer else [answer]
+    else:
+        answer_list = answer  # Store as a single value for other field types
 
     try:
         print(f"Updating Response: {response_id}, Field: {field_id}")
-        print(f"Label: {label}, Answer: {answer_list}")
+        print(f"Label: {label}, Answer: {answer_list}, Field Type: {field_type}")
 
         # Reference to Firestore
         field_ref = db.collection('Responses').document(response_id).collection('responded_fields').document(field_id)
@@ -223,10 +227,10 @@ def update_response(response_id, field_id):
         doc = field_ref.get()
         print(f"Document Exists: {doc.exists}")
 
-        # Store as a list if it's a checkbox field
+        # Update Firestore
         field_ref.set({
             "label": label,
-            "answer": answer_list,  # Stores as an array
+            "answer": answer_list,  # Store as a list only for checkboxes
             "updated_at": firestore.SERVER_TIMESTAMP
         }, merge=True)
 
@@ -237,6 +241,7 @@ def update_response(response_id, field_id):
     except Exception as e:
         print(f"Firestore Error: {e}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/delete-form/<form_id>', methods=['GET'])
 def delete_form(form_id):
