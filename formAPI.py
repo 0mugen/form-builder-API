@@ -99,7 +99,7 @@ def update_form_metadata(form_id):
     if "form_desc" in request.args:
         updated_data["desc"] = request.args.get("form_desc")
     if "editable_responses" in request.args:
-        updated_data["editable_responses"] = request.args.get("editable_responses")
+        updated_data["editable_responses"] = request.args.get("editable_responses").lower() == "true"
 
     if updated_data:
         form_ref.set(updated_data, merge=True)
