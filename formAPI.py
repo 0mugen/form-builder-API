@@ -111,7 +111,7 @@ def update_form_metadata(form_id):
             "message": "Form metadata updated successfully", 
             "title": updated_doc.get("title", "Untitled Form"), 
             "desc": updated_doc.get("desc", "No description"),
-            "editable_responses": updated_doc.get("editable_responses", )
+            "editable_responses": updated_doc.get("editable_responses", False)
         }), 200
 
 
