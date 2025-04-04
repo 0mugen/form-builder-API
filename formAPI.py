@@ -98,6 +98,8 @@ def update_form_metadata(form_id):
         updated_data["title"] = request.args.get("form_title")
     if "form_desc" in request.args:
         updated_data["desc"] = request.args.get("form_desc")
+    if "editable_responses" in request.args:
+        updated_data["editable_responses"] = request.args.get("editable_responses")
 
     if updated_data:
         form_ref.set(updated_data, merge=True)
@@ -108,7 +110,8 @@ def update_form_metadata(form_id):
     return jsonify({
             "message": "Form metadata updated successfully", 
             "title": updated_doc.get("title", "Untitled Form"), 
-            "desc": updated_doc.get("desc", "No description")
+            "desc": updated_doc.get("desc", "No description"),
+            "editable_responses": updated_doc.get("editable_responses", )
         }), 200
 
 
@@ -177,8 +180,8 @@ def add_form_field(form_id, field_type):
     return jsonify({"message": "New field added successfully", "field_id": new_field_id, "fields": updated_fields}), 200
 
 
-@app.route('/create-response/<form_id>/<user_id>', methods=['GET'])
-def create_or_get_response(form_id, user_id):
+@app.route('/create-response/<form_id>/<use_id>/<user_id>', methods=['GET'])
+def create_or_get_response(form_id, use_id, user_id):
     if not form_id or not user_id:
         return jsonify({"error": "Missing form_id or user_id"}), 400
 
@@ -196,6 +199,8 @@ def create_or_get_response(form_id, user_id):
         "form_id": form_id,
         "user_id": user_id,
         "submitted_at": firestore.SERVER_TIMESTAMP,
+        "use_id": use_id,
+        "approval_status": "pending",
         "fields": []
     })
 
@@ -206,6 +211,7 @@ def update_response(response_id, field_id):
     label = request.args.get('label')
     answer = request.args.get('answer')
     field_type = request.args.get('field_type')  # Get field type from request
+    approval_status = request.args.get('approval_status')
 
     if not response_id or not field_id or not label or answer is None or not field_type:
         return jsonify({"error": "Missing required parameters"}), 400
@@ -244,6 +250,17 @@ def update_response(response_id, field_id):
         print(f"Firestore Error: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/delete-response/<response_id>', methods=['GET'])
+def delete_response(response_id):
+    try:
+        response_ref = db.collection("Responses").document(response_id)
+        if not response_ref.get().exists:
+            return jsonify({"error": "Response not found"}), 404
+        
+        response_ref.delete()
+        return jsonify({"message": "Response deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/delete-form/<form_id>', methods=['GET'])
 def delete_form(form_id):
@@ -282,7 +299,7 @@ def create_activity():
         activity_desc = request.args.get("activity_desc", "Description here")
         start_date = request.args.get("start_date")
         end_date = request.args.get("end_date")
-        # status = request.args.get("status", "Pending")
+        status = request.args.get("status", "Open")
 
         if not user_id:
             return jsonify({"error": "user_id is required"}), 400
@@ -295,7 +312,7 @@ def create_activity():
             "start_date": datetime.datetime.strptime(start_date, "%Y-%m-%d").date() if start_date else None,
             "end_date": datetime.datetime.strptime(end_date, "%Y-%m-%d").date() if end_date else None,
             "created_on": firestore.SERVER_TIMESTAMP,
-            # "status": status,
+            "status": status,
             "user_id": user_id,
             "form_id": form_id
         }
@@ -334,7 +351,7 @@ def update_activity(user_id, activity_id):
             return jsonify({"error": "Unauthorized access"}), 403
 
         update_data = {}
-        for key in ["activity_title", "activity_desc", "status", "form_id", "is_event", "is_club"]:
+        for key in ["activity_title", "activity_desc", "status", "form_id"]:
             if key in data:
                 update_data[key] = data.get(key)
 
