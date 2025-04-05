@@ -200,7 +200,7 @@ def create_or_get_response(form_id, use_id, user_id):
         "user_id": user_id,
         "submitted_at": firestore.SERVER_TIMESTAMP,
         "use_id": use_id,
-        "approval_status": "pending",
+        "approval_status": "Pending",
         "fields": []
     })
 
