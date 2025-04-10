@@ -170,7 +170,8 @@ def add_form_field(form_id, field_type):
         "correct_option": "",
         "required": False,
         "field_id": new_field_id,
-        "created_at": firestore.SERVER_TIMESTAMP
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "form_id": form_id
     }
     fields_collection.document(new_field_id).set(new_field, merge=True)
     
