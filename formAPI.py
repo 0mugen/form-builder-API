@@ -2,11 +2,11 @@ import os, uuid, datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 from flask import jsonify, Flask, request
-from flask_cors import CORS  # Added CORS support
+# from flask_cors import CORS  # Added CORS support
 from supabase import create_client, Client
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend access
+# CORS(app)  # Enable CORS for frontend access
 
 # Load Firestore credentials from environment variable
 cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/etc/secrets/formAPIkey.json")
